@@ -373,6 +373,30 @@
   <div id="wishlistItems" class="flex-1 overflow-y-auto p-6 space-y-5"></div>
 </div>
 
+<!-- =============== PRODUCT QUICK VIEW (image gallery) =============== -->
+<div id="productViewBg" class="fixed inset-0 z-[145] bg-ink/95 backdrop-blur-xl hidden items-center justify-center p-4 overflow-y-auto">
+  <div class="glass border border-gold/20 rounded-[2rem] max-w-3xl w-full my-8 overflow-hidden shadow-2xl">
+    <div class="grid md:grid-cols-2">
+      <div class="relative bg-ink/5 dark:bg-black/20 flex items-center justify-center" style="min-height:340px;">
+        <button onclick="closeProductView()" class="absolute top-3 left-3 z-20 w-9 h-9 rounded-full bg-ink/60 text-cream flex items-center justify-center hover:bg-ink/80"><i class="fa-solid fa-xmark"></i></button>
+        <button onclick="shiftProductView(-1)" class="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-ink/50 text-cream flex items-center justify-center hover:bg-ink/70"><i class="fa-solid fa-chevron-right"></i></button>
+        <img id="pvMainImage" class="w-full h-full object-cover" style="max-height:520px;">
+        <button onclick="shiftProductView(1)" class="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-ink/50 text-cream flex items-center justify-center hover:bg-ink/70"><i class="fa-solid fa-chevron-left"></i></button>
+        <div id="pvThumbs" class="absolute bottom-3 inset-x-3 flex gap-2 justify-center flex-wrap"></div>
+      </div>
+      <div class="p-8 flex flex-col">
+        <p class="text-xs text-gold mb-1" id="pvCategory"></p>
+        <h3 class="font-display text-2xl mb-3" id="pvName"></h3>
+        <div class="flex items-center gap-2 mb-6"><span class="font-display text-xl" id="pvPrice"></span><span class="text-sm text-ink/40 dark:text-cream/40 line-through" id="pvOldPrice"></span></div>
+        <div class="mt-auto flex gap-2">
+          <button id="pvAddToCart" class="seal-btn flex-1"><i class="fa-solid fa-bag-shopping ml-1"></i> أضيفي للسلة</button>
+          <button id="pvWishlist" class="w-12 h-12 rounded-full border border-gold/30 flex items-center justify-center hover:bg-gold/10"><i class="fa-regular fa-heart"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* =========================================================================
    FIREBASE SETUP — same project as the admin panel (wishly-admin.html)
@@ -416,7 +440,7 @@ const REVIEWS = [
 const FAQS = [
   { q:'كم يستغرق تجهيز الطلب؟', a:'مدة التجهيز تتراوح من 5 إلى 14 يوم عمل حسب حجم الطلب ودرجة التخصيص المطلوبة.' },
   { q:'هل يمكن تخصيص الألوان والتصميم؟', a:'بالطبع، قسم "بوكسات حسب الطلب" مخصص بالكامل لتصميم توزيعتك بألوانك وأفكارك الخاصة.' },
-  { q:'ما هي مناطق التوصيل المتاحة؟', a:'نوصل لجميع محافظات مصر، مع إمكانية الشحن الدولي لبعض الدول العربية.' },
+  { q:'ما هي مناطق التوصيل المتاحة؟', a:'نوصل لجميع ولايات السودان، مع إمكانية الشحن الدولي لبعض الدول العربية.' },
   { q:'هل تتوفر عينات قبل الطلب الكامل؟', a:'نعم، يمكنك طلب عينة واحدة لمعاينة الجودة قبل تأكيد الكمية الكاملة.' },
   { q:'ما طرق الدفع المتاحة؟', a:'الدفع عند الاستلام، التحويل البنكي، أو الدفع الإلكتروني عبر بطاقات الائتمان.' },
 ];
@@ -536,15 +560,16 @@ function renderProducts(){
 
   gridEl.innerHTML = list.map(p => `
     <div class="product-card reveal in bg-cream dark:bg-ink2 rounded-[1.75rem] overflow-hidden border border-gold/10 shadow-sm">
-      <div class="img-wrap relative aspect-[4/5]">
+      <div class="img-wrap relative aspect-[4/5] cursor-pointer" onclick="openProductView('${p.id}')">
         <img src="${imgUrl(p.img,600)}" class="w-full h-full object-cover" alt="${p.name}">
+        ${p.gallery && p.gallery.length ? `<span class="absolute top-3 left-3 bg-ink/70 text-cream text-[11px] px-2.5 py-1 rounded-full"><i class="fa-solid fa-images ml-1"></i>${p.gallery.length + 1}</span>`:''}
         ${p.badge ? `<span class="absolute top-3 right-3 bg-gold text-ink text-xs font-bold px-3 py-1 rounded-full">${p.badge}</span>`:''}
         <div class="quick-actions absolute bottom-3 inset-x-3 flex gap-2">
-          <button onclick="addToCart('${p.id}')" class="flex-1 bg-ink/90 text-cream text-sm rounded-full py-2 hover:bg-gold hover:text-ink transition-colors"><i class="fa-solid fa-bag-shopping ml-1"></i> أضيفي للسلة</button>
-          <button onclick="toggleWishlist('${p.id}')" class="w-9 h-9 rounded-full bg-cream/90 flex items-center justify-center hover:bg-gold"><i class="fa-regular fa-heart"></i></button>
+          <button onclick="event.stopPropagation(); addToCart('${p.id}')" class="flex-1 bg-ink/90 text-cream text-sm rounded-full py-2 hover:bg-gold hover:text-ink transition-colors"><i class="fa-solid fa-bag-shopping ml-1"></i> أضيفي للسلة</button>
+          <button onclick="event.stopPropagation(); toggleWishlist('${p.id}')" class="w-9 h-9 rounded-full bg-cream/90 flex items-center justify-center hover:bg-gold"><i class="fa-regular fa-heart"></i></button>
         </div>
       </div>
-      <div class="p-5"><p class="text-xs text-gold mb-1">${catName(p.cat)}</p><p class="font-bold mb-2">${p.name}</p>
+      <div class="p-5 cursor-pointer" onclick="openProductView('${p.id}')"><p class="text-xs text-gold mb-1">${catName(p.cat)}</p><p class="font-bold mb-2">${p.name}</p>
         <div class="flex items-center gap-2"><span class="font-display text-lg">${p.price} ج.س</span>${p.old ? `<span class="text-sm text-ink/40 dark:text-cream/40 line-through">${p.old} ج.س</span>`:''}</div>
       </div>
     </div>`).join('');
@@ -628,6 +653,42 @@ function renderWishlist(){
 }
 window.openDrawer = (type)=>{ document.getElementById(type+'DrawerBg').classList.remove('hidden'); document.getElementById(type+'Drawer').classList.add('open'); };
 window.closeDrawer = (type)=>{ document.getElementById(type+'DrawerBg').classList.add('hidden'); document.getElementById(type+'Drawer').classList.remove('open'); };
+
+/* =========================================================================
+   PRODUCT QUICK VIEW — lets the customer browse every photo of a product
+   (cover + additional gallery images added from the admin panel)
+========================================================================= */
+let pvImages = [];
+let pvIndex = 0;
+window.openProductView = (id)=>{
+  const p = products.find(x=>x.id===id); if(!p) return;
+  pvImages = [p.img, ...(p.gallery||[])].filter(Boolean);
+  if(!pvImages.length) pvImages = [p.img];
+  pvIndex = 0;
+  document.getElementById('pvCategory').textContent = catName(p.cat);
+  document.getElementById('pvName').textContent = p.name;
+  document.getElementById('pvPrice').textContent = p.price + ' ج.س';
+  document.getElementById('pvOldPrice').textContent = p.old ? p.old + ' ج.س' : '';
+  document.getElementById('pvAddToCart').onclick = () => addToCart(p.id);
+  document.getElementById('pvWishlist').onclick = () => toggleWishlist(p.id);
+  renderProductView();
+  document.getElementById('productViewBg').classList.remove('hidden');
+  document.getElementById('productViewBg').classList.add('flex');
+};
+function renderProductView(){
+  document.getElementById('pvMainImage').src = imgUrl(pvImages[pvIndex], 900);
+  const thumbs = document.getElementById('pvThumbs');
+  if(pvImages.length > 1){
+    thumbs.innerHTML = pvImages.map((src,i) => `
+      <img src="${imgUrl(src,120)}" data-pvthumb="${i}" class="w-12 h-12 object-cover rounded-lg cursor-pointer border-2 ${i===pvIndex ? 'border-gold' : 'border-transparent opacity-70 hover:opacity-100'}">
+    `).join('');
+    thumbs.querySelectorAll('[data-pvthumb]').forEach(t => t.onclick = () => { pvIndex = Number(t.dataset.pvthumb); renderProductView(); });
+  } else {
+    thumbs.innerHTML = '';
+  }
+}
+window.shiftProductView = (dir)=>{ pvIndex = (pvIndex + dir + pvImages.length) % pvImages.length; renderProductView(); };
+window.closeProductView = ()=>{ document.getElementById('productViewBg').classList.add('hidden'); document.getElementById('productViewBg').classList.remove('flex'); };
 
 window.checkout = async ()=>{
   if(!cart.length){ showToast('سلتك فارغة، أضيفي تصميماً أولاً'); return; }
