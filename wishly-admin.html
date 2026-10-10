@@ -11,7 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Great+Vibes&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
@@ -233,6 +233,9 @@
   </div>
 </div>
 
+<script>
+window.addEventListener('error',function(e){try{if(document.getElementById('__jsErr'))return;var d=document.createElement('div');d.id='__jsErr';d.style.cssText='position:fixed;bottom:12px;left:12px;right:12px;z-index:9999;background:#7a1f2b;color:#fff;padding:10px 14px;border-radius:12px;font:12px/1.6 sans-serif;direction:ltr';d.textContent='JS error: '+(e.message||'')+' '+(e.filename||'').split('/').pop()+':'+(e.lineno||'');document.body.appendChild(d)}catch(x){}});
+</script>
 <script type="module">
 /* =========================================================================
    Wishly Admin — core: firebase, state, helpers, UI primitives
@@ -724,7 +727,7 @@ onAuthStateChanged(auth, (user) => {
    DASHBOARD — analytics
 ========================================================================= */
 let dashRange = 30, trendMetric = 'sales', trendTable = false, charts = {};
-Chart.defaults.font.family = 'Cairo'; Chart.defaults.color = '#6B5459';
+if (typeof Chart !== 'undefined') { Chart.defaults.font.family = 'Cairo'; Chart.defaults.color = '#6B5459'; }
 
 const fmtShort = (t) => new Date(t).toLocaleDateString('en-GB', { day:'numeric', month:'numeric' });
 function delta(cur, prev, invert){
@@ -913,7 +916,7 @@ function renderDashboard(){
 
   /* chart */
   const cv = $('#trendChart');
-  if (cv) {
+  if (cv && typeof Chart === 'undefined') cv.parentElement.innerHTML = '<p class="muted text-sm p-6">تعذر تحميل مكتبة الرسوم — تأكدي من الإنترنت.</p>'; else if (cv) {
     const labels = buckets.map(b => fmtShort(b.t)); const isSales = trendMetric === 'sales';
     const grid = { color:'rgba(154,92,109,.10)' };
     const tick = { callback:(v) => isSales ? (v >= 1000 ? (v / 1000) + 'k' : v) : v, maxTicksLimit:5 };
