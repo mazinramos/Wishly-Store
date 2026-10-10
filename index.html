@@ -373,13 +373,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.16.0/fireba
 import { getFirestore, collection, addDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyAoeJyJNS0ZDOVPtIpLBm8yyZuSw7PmyBs",
-    authDomain: "twins-30485.firebaseapp.com",
-    projectId: "twins-30485",
-    storageBucket: "twins-30485.firebasestorage.app",
-    messagingSenderId: "763725449552",
-    appId: "1:763725449552:web:b8f367001b6796133c0455",
-    measurementId: "G-4T0FTPF17V"
+    apiKey: "AIzaSyB6w7TFS7YTAZLdfmxeBXCF5OltJuVCCik",
+  authDomain: "wishly-82ae9.firebaseapp.com",
+  projectId: "wishly-82ae9",
+  messagingSenderId: "1057469833185",
+  appId: "1:1057469833185:web:d9a433c4110193e65d7ca0",
+  measurementId: "G-ME62PGMGRW"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -657,7 +656,7 @@ window.submitCustom = async (e)=>{
   const btn=document.getElementById('cfSubmitBtn'), original=btn.innerHTML; btn.disabled=true; btn.innerHTML='جارِ الإرسال...';
   try{
     await addDoc(collection(db,'customOrders'), { name:g('cfName').trim(), phone:g('cfPhone').trim(), occasion:g('cfOccasion'), eventDate:g('cfDate'), pieces:g('cfPieces'), budget:g('cfBudget').trim(), description:g('cfDesc').trim(), status:'جديد', createdAt:Date.now(), seen:false });
-    showToast('استلمنا طلبك الخاص، سيتواصل معك فريق التصميم قريباً '); e.target.reset();
+    showToast('استلمنا طلبك الخاص، سيتواصل معك فريق التصميم قريباً 🎨'); e.target.reset();
   }catch(err){ showToast('تعذر إرسال الطلب، تحققي من اتصالك بالإنترنت وحاولي مرة أخرى'); console.error(err); }
   btn.disabled=false; btn.innerHTML=original;
 };
