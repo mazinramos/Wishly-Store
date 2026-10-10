@@ -1068,7 +1068,7 @@ function renderOrderPanel(force){
       ${hasCost ? `<p class="text-xs muted"><i class="fa-solid fa-coins text-mauve ml-1"></i> ربح تقديري لهذا الطلب: <b style="color:var(--mauveD)">${money(profit)}</b></p>` : ''}
       <div><label class="label" for="opNotes">ملاحظات داخلية</label><textarea id="opNotes" class="input" rows="3" data-change="opNotes" placeholder="مثال: العميلة تريد الشريط ذهبياً، التسليم بعد العصر...">${esc(o.notes || '')}</textarea></div>
       <div><p class="label">سجل الطلب</p><div class="space-y-2">${hist.map(h => `<div class="flex items-center gap-2 text-xs"><span class="w-2 h-2 rounded-full" style="background:var(--mauve)"></span><b>${esc(h.status)}</b><span class="muted">${fmtDT(h.at)}</span></div>`).join('')}</div></div>
-      <div class="flex gap-2 flex-wrap pt-2"><button class="btn flex-1" data-act="orderInvoice" data-id="${esc(o.id)}"><i class="fa-solid fa-file-invoice"></i> الفاتورة</button><button class="btn btn-danger" data-act="deleteOrder" data-id="${esc(o.id)}"><i class="fa-solid fa-trash"></i> حذف</button></div>
+      <div class="flex gap-2 flex-wrap pt-2"><button class="btn btn-soft flex-1" data-act="editOrder" data-id="${esc(o.id)}"><i class="fa-solid fa-pen"></i> تعديل الطلب</button><button class="btn flex-1" data-act="orderInvoice" data-id="${esc(o.id)}"><i class="fa-solid fa-file-invoice"></i> الفاتورة</button><button class="btn btn-danger" data-act="deleteOrder" data-id="${esc(o.id)}"><i class="fa-solid fa-trash"></i> حذف</button></div>
     </div>`);
 }
 actions.oStep = (d) => { setOrderStatus(d.id, d.v); };
@@ -1134,6 +1134,45 @@ actions.newOrder = () => {
       const id = await createOrder({ customer:$('#noName', m.el).value.trim(), phone:$('#noPhone', m.el).value.trim(), address:$('#noAddr', m.el).value.trim(), items, status:$('#noStatus', m.el).value, source:$('#noSource', m.el).value, notes:$('#noNotes', m.el).value.trim() });
       if (id) { toast('تم حفظ الطلب'); m.close(); navTo('orders', { open:id }); } else { btn.disabled = false; btn.textContent = 'حفظ الطلب'; }
     } catch (err) { toast('تعذر حفظ الطلب — ' + friendlyError(err), 'err'); console.error(err); btn.disabled = false; btn.textContent = 'حفظ الطلب'; }
+  });
+};
+
+/* ---------- تعديل طلب موجود (بيانات + عناصر) مع تسوية المخزون ---------- */
+function netStockOps(oldItems, newItems){
+  const net = {}; const add = (items, sign) => (items || []).forEach(it => { if (!it.id) return; net[it.id] = (net[it.id] || 0) + sign * (Number(it.qty) || 0); });
+  add(oldItems, +1); add(newItems, -1); // الرصيد يرجع بكمية القديم ويُخصم بكمية الجديد
+  const ops = [], short = [];
+  Object.entries(net).forEach(([pid, delta]) => {
+    const p = productById(pid); if (!tracked(p) || !delta) return;
+    const before = p.stock, after = before + delta; ops.push({ pid, name:p.name, delta, before, after });
+    if (after < 0) short.push(`${p.name} (متاح ${before})`);
+  });
+  return { ops, short };
+}
+actions.editOrder = (d) => {
+  const o = orders.find(x => x.id === d.id); if (!o) return;
+  const m = openModal({ title:`<i class="fa-solid fa-pen text-mauve ml-2"></i> تعديل الطلب ${code(o)}`, size:'lg', body: `
+    ${o.stockDeducted ? '<p class="text-xs leading-6 mb-4 p-3 rounded-xl" style="background:var(--blushL);color:var(--mauveD)">هذا الطلب خُصم مخزونه، لذلك سيتم تعديل المخزون تلقائياً بفرق الكميات عند الحفظ.</p>' : ''}
+    <form id="eoForm" class="space-y-4">
+      <div class="grid sm:grid-cols-2 gap-3"><div><label class="label">اسم العميلة</label><input required id="eoName" class="input" value="${esc(o.customer || '')}"></div><div><label class="label">رقم الجوال</label><input required id="eoPhone" class="input" dir="ltr" inputmode="tel" value="${esc(o.phone || '')}"></div></div>
+      <div><label class="label">العنوان</label><input id="eoAddr" class="input" value="${esc(o.address || '')}"></div>
+      <div><p class="label">عناصر الطلب</p>${itemsEditor(o.items || [])}</div>
+      <button class="btn w-full !py-3" id="eoSubmit">حفظ التعديلات</button>
+    </form>` });
+  irCalcTotal($('[data-items]', m.el));
+  $('#eoForm', m.el).addEventListener('submit', async (e) => {
+    e.preventDefault(); const items = readItems(m.el, dominantCategory(o.items)); if (!items.length) { toast('أضيفي عنصراً واحداً على الأقل', 'err'); return; }
+    const btn = $('#eoSubmit', m.el); btn.disabled = true; btn.textContent = 'جارِ الحفظ...';
+    try {
+      const b = writeBatch(db); const total = sum(items, i => i.qty * i.price);
+      if (o.stockDeducted) {
+        const r = netStockOps(o.items, items);
+        if (r.short.length && !(await confirmBox({ title:'المخزون غير كافٍ', text:'بعض المنتجات لا تكفي: ' + r.short.join(' — ') + '. المتابعة ستجعل المخزون سالباً.', okText:'متابعة' }))) { btn.disabled = false; btn.textContent = 'حفظ التعديلات'; return; }
+        addOps(b, r.ops, `تعديل طلب ${code(o)}`, o.id);
+      }
+      b.update(doc(db, 'orders', o.id), { customer:$('#eoName', m.el).value.trim(), phone:$('#eoPhone', m.el).value.trim(), address:$('#eoAddr', m.el).value.trim(), items, total, editedAt:Date.now(), statusHistory: arrayUnion({ status:'تم تعديل الطلب', at:Date.now() }) });
+      await b.commit(); toast('تم تعديل الطلب'); m.close();
+    } catch (err) { toast('تعذر التعديل — ' + friendlyError(err), 'err'); console.error(err); btn.disabled = false; btn.textContent = 'حفظ التعديلات'; }
   });
 };
 
@@ -1545,18 +1584,20 @@ actions.askNotif = async () => { if (!('Notification' in window)) { toast('ال�
 ========================================================================= */
 let invData = null, invModal = null;
 const templatesFor = (cat) => { const ex = templates.filter(t => t.category === cat); return ex.length ? ex : templates.filter(t => t.category === 'general'); };
+// html2canvas يكسر الحروف العربية الملاصقة للأرقام (مثل "منتج1")، فنعزل الأرقام داخل عناصر مستقلة
+const pdfSafe = (v) => esc(v).replace(/(&#?\w+;)|(\d+)/g, (m, ent, d) => ent ? ent : `<span style="display:inline-block;direction:ltr;unicode-bidi:isolate">${d}</span>`);
 function invoicePaperHTML(d, msg){
-  const rows = (d.items || []).map((it, i) => `<tr><td style="padding:10px 6px;text-align:center;color:#8E787D;font-size:13px">${i + 1}</td><td style="padding:10px 6px;font-weight:700;letter-spacing:0">${esc(it.name)}</td><td style="padding:10px 6px;text-align:center">${num(it.qty)}</td><td style="padding:10px 6px;text-align:center">${money(it.price)}</td><td style="padding:10px 6px;text-align:center;font-weight:700">${money(it.price * it.qty)}</td></tr>`).join('');
+  const rows = (d.items || []).map((it, i) => `<tr><td style="padding:10px 6px;text-align:center;color:#8E787D;font-size:13px">${i + 1}</td><td style="padding:10px 6px;font-weight:700;letter-spacing:0">${pdfSafe(it.name)}</td><td style="padding:10px 6px;text-align:center">${num(it.qty)}</td><td style="padding:10px 6px;text-align:center">${money(it.price)}</td><td style="padding:10px 6px;text-align:center;font-weight:700">${money(it.price * it.qty)}</td></tr>`).join('');
   return `<div style="padding:34px;letter-spacing:0;font-kerning:none;font-synthesis:none" dir="rtl">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #9A5C6D;padding-bottom:18px;margin-bottom:22px;gap:12px">
       <div style="display:flex;align-items:center;gap:10px"><svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="#9A5C6D" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="12" y="26" width="40" height="30" rx="2"/><rect x="8" y="20" width="48" height="9" rx="2"/><path d="M32 20v36"/><path d="M32 20c-6-12-18-10-14-3 3 5 14 3 14 3zM32 20c6-12 18-10 14-3-3 5-14 3-14 3z"/></svg>
         <div><p style="font-family:'Great Vibes',cursive;font-size:36px;line-height:1.25;margin:0;color:#9A5C6D">Wishly</p><p style="font-size:10px;letter-spacing:0;word-spacing:2px;color:#9A5C6D;margin:14px 0 0">GIFTS • TREATS • MEMORIES</p></div></div>
       <div style="text-align:left"><p style="font-weight:800;font-size:20px;margin:0;color:#7A4455">فاتورة بيع</p><p style="font-size:12px;color:#8E787D;margin:4px 0 0">${esc(d.label)}</p><p style="font-size:12px;color:#8E787D;margin:2px 0 0">${fmtDate(d.date, { year:'numeric', month:'long', day:'numeric' })}</p></div></div>
-    <div style="display:flex;justify-content:space-between;margin-bottom:22px;gap:20px;flex-wrap:wrap"><div><p style="font-size:11px;color:#8E787D;margin:0 0 4px">فاتورة إلى</p><p style="font-weight:700;margin:0">${esc(d.customer || 'عميلة')}</p><p style="font-size:13px;color:#6B5459;margin:2px 0 0" dir="ltr">${esc(d.phone || '')}</p>${d.address ? `<p style="font-size:12px;color:#8E787D;margin:4px 0 0"> ${esc(d.address)}</p>` : ''}</div>
-      <div style="text-align:left"><p style="font-size:11px;color:#8E787D;margin:0 0 4px">الحالة</p><p style="font-weight:700;margin:0">${esc(d.status || '')}</p></div></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:22px;gap:20px;flex-wrap:wrap"><div><p style="font-size:11px;color:#8E787D;margin:0 0 4px">فاتورة إلى</p><p style="font-weight:700;margin:0">${pdfSafe(d.customer || 'عميلة')}</p><p style="font-size:13px;color:#6B5459;margin:2px 0 0" dir="ltr">${esc(d.phone || '')}</p>${d.address ? `<p style="font-size:12px;color:#8E787D;margin:4px 0 0">العنوان: ${pdfSafe(d.address)}</p>` : ''}</div>
+      <div style="text-align:left"><p style="font-size:11px;color:#8E787D;margin:0 0 4px">الحالة</p><p style="font-weight:700;margin:0">${pdfSafe(d.status || '')}</p></div></div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr style="background:#F6E9E8">${['#', 'المنتج', 'الكمية', 'السعر', 'الإجمالي'].map(h => `<th style="padding:10px 6px;font-size:12px;color:#7A4455">${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>
     <div style="display:flex;justify-content:flex-end;margin-bottom:22px"><div style="width:240px"><div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #eee;font-size:14px"><span>الإجمالي الفرعي</span><span>${money(d.total)}</span></div><div style="display:flex;justify-content:space-between;margin-top:4px;background:#7A4455;color:#fff;border-radius:12px;padding:12px 14px;font-weight:800"><span>الإجمالي الكلي</span><span>${money(d.total)}</span></div></div></div>
-    ${msg ? `<div style="margin-bottom:22px;padding:16px 20px;background:#FBF6F3;border-right:3px solid #9A5C6D;border-radius:10px"><p style="font-size:13px;line-height:1.9;color:#3B2A2F;margin:0;white-space:pre-line"> ${esc(msg)}</p></div>` : ''}
+    ${msg ? `<div style="margin-bottom:22px;padding:16px 20px;background:#FBF6F3;border-right:3px solid #9A5C6D;border-radius:10px"><p style="font-size:13px;line-height:1.9;color:#3B2A2F;margin:0;white-space:pre-line">${pdfSafe(msg)}</p></div>` : ''}
     <div style="text-align:center;border-top:1px dashed #ddd;padding-top:16px;color:#8E787D;font-size:12px;line-height:1.9">شكراً لثقتك في وشلي — للاستفسار: <span dir="ltr">${esc(settings.phone || '')}</span> | ${esc(settings.email || '')}<br>السودان</div></div>`;
 }
 function openInvoice(data){
