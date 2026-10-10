@@ -28,7 +28,7 @@
   }
   *{ -webkit-tap-highlight-color:transparent; }
   html{ scroll-behavior:smooth; }
-  body{ font-family:'Cairo',sans-serif; background:var(--cream); color:var(--ink); }
+  html,body{ overflow-x:hidden; } body{ font-family:'Cairo',sans-serif; background:var(--cream); color:var(--ink); }
   .logo-script{ font-family:'Great Vibes',cursive; }
   :focus-visible{ outline:2px solid var(--mauve); outline-offset:2px; }
   ::-webkit-scrollbar{ width:8px; height:8px; } ::-webkit-scrollbar-thumb{ background:#D9B9BE; border-radius:10px; }
@@ -243,21 +243,18 @@ import {
   writeBatch, increment, arrayUnion, deleteField
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAoeJyJNS0ZDOVPtIpLBm8yyZuSw7PmyBs",
-  authDomain: "twins-30485.firebaseapp.com",
-  projectId: "twins-30485",
-  storageBucket: "twins-30485.firebasestorage.app",
-  messagingSenderId: "763725449552",
-  appId: "1:763725449552:web:b8f367001b6796133c0455",
-  measurementId: "G-4T0FTPF17V"
+  apiKey: "AIzaSyB6w7TFS7YTAZLdfmxeBXCF5OltJuVCCik",
+  authDomain: "wishly-82ae9.firebaseapp.com",
+  projectId: "wishly-82ae9",
+  messagingSenderId: "1057469833185",
+  appId: "1:1057469833185:web:d9a433c4110193e65d7ca0",
+  measurementId: "G-ME62PGMGRW"
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app);
 
 /* ---------- reference data ---------- */
 const CATEGORY_LIST = [
@@ -350,10 +347,6 @@ function downloadCSV(name, rows){
 function friendlyError(err){
   const c = err?.code || '';
   const map = {
-    'storage/unauthorized':'مفيش صلاحية لرفع الصور — راجعي Storage Rules في Firebase Console',
-    'storage/unauthenticated':'لازم تكوني مسجلة دخول — سجّلي خروج ودخول تاني',
-    'storage/unknown':'خدمة Cloud Storage غير مفعّلة — من Firebase Console: Storage ← Get Started',
-    'storage/retry-limit-exceeded':'انتهت مهلة رفع الصورة، جربي صورة أصغر',
     'permission-denied':'الصلاحيات مرفوضة — راجعي Firestore Rules (الملف المرفق firestore.rules)',
     'unavailable':'تعذر الاتصال بقاعدة البيانات، تحققي من الإنترنت',
     'failed-precondition':'العملية تحتاج فهرساً أو شرطاً غير مكتمل في Firestore',
@@ -407,28 +400,6 @@ document.addEventListener('change', (e) => { const t = e.target.closest('[data-c
 document.addEventListener('input', (e) => { const t = e.target.closest('[data-input]'); if (t && actions[t.dataset.input]) actions[t.dataset.input](t.dataset, t, e); });
 
 /* ---------- image upload ---------- */
-function resizeToBlob(file, maxDim = 1100, quality = .78){
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; } else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
-        const cv = document.createElement('canvas'); cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cv.toBlob((b) => resolve(b), 'image/jpeg', quality);
-      };
-      img.onerror = reject; img.src = e.target.result;
-    };
-    reader.onerror = reject; reader.readAsDataURL(file);
-  });
-}
-async function uploadImage(file, folder){
-  const blob = await resizeToBlob(file);
-  const r = ref(storage, `${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`);
-  await uploadBytes(r, blob, { contentType:'image/jpeg' });
-  return await getDownloadURL(r);
-}
 
 /* ---------- auth ---------- */
 const authErr = (c) => ({
@@ -599,7 +570,19 @@ async function setOrderStatus(id, newStatus){
 let refreshQueued = false;
 function scheduleRefresh(){ if (refreshQueued) return; refreshQueued = true; requestAnimationFrame(() => { refreshQueued = false; refreshAll(); }); }
 function startListeners(){
-  const onErr = (what) => (err) => toast(`تعذر تحميل ${what} — ` + friendlyError(err), 'err');
+  let errShown = false;
+  const onErr = (what) => (err) => {
+    console.error(what, err);
+    if (errShown) return; errShown = true;
+    const denied = err && (err.code === 'permission-denied' || err.code === 'unauthenticated');
+    const b = document.createElement('div');
+    b.className = 'fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40';
+    b.innerHTML = `<div class="card card-pad max-w-md w-full space-y-3 text-sm leading-7"><p class="font-extrabold text-base" style="color:var(--crit)"><i class="fa-solid fa-triangle-exclamation ml-1"></i> ${denied ? 'Firebase رافض الوصول للبيانات' : 'تعذر تحميل البيانات'}</p>
+      ${denied ? `<ol class="list-decimal pr-5 space-y-1"><li>افتحي Firebase Console على مشروع <b>${esc(app.options.projectId)}</b> بالظبط (لو عندك مشاريع كتير) ← Firestore Database ← <b>Rules</b>.</li><li>امسحي القواعد الحالية والصقي محتوى ملف <b>firestore.rules</b> كاملاً، ثم اضغطي <b>Publish</b>.</li><li>تأكدي أنك مسجلة دخول بحساب من Authentication (Email/Password) مفعّل.</li><li>حدّثي الصفحة.</li></ol>` : `<p class="muted">${esc(friendlyError(err))}</p>`}
+      <p class="text-[11px] muted" dir="ltr">${esc(what)} • ${esc((err && (err.code || err.message)) || '')}<br>project: ${esc(app.options.projectId)} • user: ${esc(auth.currentUser ? auth.currentUser.email : 'NOT SIGNED IN')}</p>
+      <button class="btn w-full" id="errClose">حسناً</button></div>`;
+    document.body.appendChild(b); b.querySelector('#errClose').onclick = () => b.remove();
+  };
   unsub.push(onSnapshot(collection(db, 'products'), (s) => { products = s.docs.map(d => ({ id:d.id, ...d.data() })); ready.products = true; scheduleRefresh(); }, onErr('المنتجات')));
   unsub.push(onSnapshot(collection(db, 'offers'), (s) => { offers = s.docs.map(d => ({ id:d.id, ...d.data() })); scheduleRefresh(); }, onErr('العروض')));
   unsub.push(onSnapshot(query(collection(db, 'orders'), orderBy('createdAt', 'desc')), (s) => {
@@ -1229,7 +1212,7 @@ actions.cDelete = async (d) => { const ok = await confirmBox({ title:'حذف ا�
 /* =========================================================================
    PRODUCTS
 ========================================================================= */
-const pFilter = { q:'', cat:'all' }; let pfFile = null;
+const pFilter = { q:'', cat:'all' };
 views.products = {
   mount(){
     const p = takeParams('products');
@@ -1266,7 +1249,7 @@ actions.pDel = async (d) => { const p = productById(d.id); if (!p) return; const
   try { await deleteDoc(doc(db, 'products', d.id)); toast('تم حذف المنتج'); } catch (e) { toast(friendlyError(e), 'err'); } };
 
 function openProductPanel(id){
-  const p = id ? productById(id) : null; if (id && !p) return; pfFile = null;
+  const p = id ? productById(id) : null; if (id && !p) return;
   const m = openModal({ title: p ? '<i class="fa-solid fa-pen text-mauve ml-2"></i> تعديل المنتج' : '<i class="fa-solid fa-plus text-mauve ml-2"></i> منتج جديد', side:true, body: `
     <form id="pfForm" class="space-y-4">
       <div><label class="label">اسم المنتج</label><input required id="pfName" class="input" value="${esc(p?.name || '')}"></div>
@@ -1278,9 +1261,7 @@ function openProductPanel(id){
       <div class="card card-pad"><label class="flex items-center justify-between gap-3 cursor-pointer"><span><b class="text-sm">تتبع المخزون</b><span class="block text-[11px] muted">يخصم الكمية تلقائياً عند تجهيز الطلب ويمنع الطلب عند النفاد</span></span><input type="checkbox" id="pfTrack" class="sr-only" ${tracked(p) ? 'checked' : ''} data-change="pfTrack"><span class="tg"></span></label>
         <div id="pfStockBox" class="grid grid-cols-2 gap-3 mt-3 ${tracked(p) ? '' : 'hidden'}"><div><label class="label">الكمية الحالية</label><input id="pfStock" type="number" min="0" class="input" value="${tracked(p) ? p.stock : 0}"></div><div><label class="label">تنبيه عند أقل من</label><input id="pfMin" type="number" min="0" class="input" placeholder="${Number(settings.defaultMinStock) || 3}" value="${typeof p?.minStock === 'number' ? p.minStock : ''}"></div></div></div>
       <div class="card card-pad"><p class="label"><i class="fa-solid fa-image ml-1"></i> صورة الغلاف</p>
-        <input type="file" accept="image/*" id="pfFile" data-change="pfFile" class="w-full text-xs file:ml-2 file:rounded-full file:border-0 file:bg-[color:var(--blushL)] file:text-[color:var(--mauveD)] file:px-3 file:py-1.5 file:font-bold">
-        <div class="flex items-center gap-2 my-2"><span class="flex-1 h-px bg-[color:var(--line)]"></span><span class="text-[11px] muted">أو</span><span class="flex-1 h-px bg-[color:var(--line)]"></span></div>
-        <input id="pfUrl" class="input !text-xs" dir="ltr" data-input="pfUrl" placeholder="رابط صورة (جوجل درايف أو رابط مباشر)" value="${p?.img && p.img.startsWith('http') && !p.img.includes('firebasestorage') ? esc(p.img) : ''}">
+        <input id="pfUrl" class="input !text-xs" dir="ltr" data-input="pfUrl" placeholder="رابط صورة (جوجل درايف أو رابط مباشر)" value="${p?.img && p.img.startsWith('http') ? esc(p.img) : ''}">
         <img id="pfPrev" alt="معاينة" class="${p?.img ? '' : 'hidden'} w-full h-36 object-cover rounded-xl mt-3" src="${esc(p?.img || '')}"><p id="pfImgErr" class="hidden text-[11px] mt-1" style="color:var(--crit)">تعذر تحميل الصورة من الرابط — تأكدي أنه عام (Public).</p></div>
       <div class="card card-pad"><p class="label"><i class="fa-solid fa-images ml-1"></i> صور إضافية (رابط في كل سطر)</p><textarea id="pfGallery" rows="3" class="input !text-xs" dir="ltr">${esc((p?.gallery || []).join('\n'))}</textarea></div>
       <button class="btn w-full !py-3" id="pfSubmit">${p ? 'حفظ التعديلات' : 'إضافة المنتج'}</button>
@@ -1290,15 +1271,13 @@ function openProductPanel(id){
 }
 actions.pfCalc = () => { const pr = Number($('#pfPrice')?.value) || 0, c = Number($('#pfCost')?.value) || 0, el = $('#pfMargin'); if (!el) return; el.textContent = pr > 0 && c > 0 ? `الربح للقطعة: ${money(pr - c)} • الهامش ${Math.round((pr - c) / pr * 100)}%` : 'أضيفي التكلفة لحساب الربح والهامش'; };
 actions.pfTrack = (d, t) => $('#pfStockBox').classList.toggle('hidden', !t.checked);
-actions.pfFile = (d, t) => { const f = t.files[0]; if (!f) return; pfFile = f; $('#pfUrl').value = ''; const pv = $('#pfPrev'); pv.src = URL.createObjectURL(f); pv.classList.remove('hidden'); $('#pfImgErr').classList.add('hidden'); };
-actions.pfUrl = (d, t) => { const u = t.value.trim(), pv = $('#pfPrev'), er = $('#pfImgErr'); if (!u) { pv.classList.add('hidden'); er.classList.add('hidden'); return; } pfFile = null; $('#pfFile').value = ''; er.classList.add('hidden'); pv.onerror = () => { pv.classList.add('hidden'); er.classList.remove('hidden'); }; pv.src = normalizeImageUrl(u); pv.classList.remove('hidden'); };
+actions.pfUrl = (d, t) => { const u = t.value.trim(), pv = $('#pfPrev'), er = $('#pfImgErr'); if (!u) { pv.classList.add('hidden'); er.classList.add('hidden'); return; } er.classList.add('hidden'); pv.onerror = () => { pv.classList.add('hidden'); er.classList.remove('hidden'); }; pv.src = normalizeImageUrl(u); pv.classList.remove('hidden'); };
 async function saveProduct(m, p){
   const btn = $('#pfSubmit', m.el), label = btn.textContent; btn.disabled = true; btn.textContent = 'جارِ الحفظ...';
   try {
     const v = (id) => $('#' + id, m.el).value; const name = v('pfName').trim();
     let img = p?.img || ''; const url = v('pfUrl').trim();
     if (url) img = normalizeImageUrl(url);
-    else if (pfFile) { try { img = await uploadImage(pfFile, 'products'); } catch (e) { console.error(e); toast('تعذر رفع الصورة — ' + friendlyError(e) + '. تم حفظ المنتج بصورة مؤقتة.', 'err'); } }
     if (!img) img = fallbackImg();
     const data = { name, cat:v('pfCat'), tag:v('pfTag'), badge:v('pfBadge').trim(), price:Number(v('pfPrice')) || 0, old:Number(v('pfOld')) || 0, cost:Number(v('pfCost')) || 0, img, gallery:v('pfGallery').split('\n').map(x => x.trim()).filter(Boolean).map(normalizeImageUrl) };
     const track = $('#pfTrack', m.el).checked, stock = Math.max(0, Number(v('pfStock')) || 0), minRaw = v('pfMin').trim();
@@ -1523,15 +1502,12 @@ actions.tplDel = async (d) => { const ok = await confirmBox({ title:'حذف ال
 /* =========================================================================
    SETTINGS
 ========================================================================= */
-let heroFile = null;
 views.settings = {
   mount(){
-    heroFile = null;
     $('#adminContent').innerHTML = `<div class="grid lg:grid-cols-2 gap-5 items-start">
       <div class="card card-pad space-y-3"><p class="card-title"><i class="fa-solid fa-image"></i> صورة البانر الرئيسي في المتجر</p>
         <img id="heroPrev" alt="معاينة البانر" src="${esc(settings.heroImage || fallbackImg())}" class="w-full h-44 object-cover rounded-xl bg-blushL">
-        <input type="file" accept="image/*" id="heroFileIn" data-change="heroFile" class="w-full text-xs file:ml-2 file:rounded-full file:border-0 file:bg-[color:var(--blushL)] file:text-[color:var(--mauveD)] file:px-3 file:py-1.5 file:font-bold">
-        <input id="heroUrl" class="input !text-xs" dir="ltr" placeholder="أو الصقي رابط صورة" data-input="heroUrl">
+        <input id="heroUrl" class="input !text-xs" dir="ltr" value="${esc(settings.heroImage || '')}" placeholder="الصقي رابط صورة (جوجل درايف أو رابط مباشر)" data-input="heroUrl">
         <p class="text-[11px] muted">تظهر في أعلى الصفحة الرئيسية فور الحفظ. الأفضل صورة أفقية بنسبة 3:1 تقريباً.</p></div>
       <form id="setForm" class="card card-pad space-y-3"><p class="card-title"><i class="fa-solid fa-sliders"></i> إعدادات التشغيل</p>
         <div class="grid grid-cols-2 gap-3"><div><label class="label">هاتف المتجر (يظهر في الفاتورة)</label><input id="stPhone" class="input" dir="ltr" value="${esc(settings.phone || '')}"></div><div><label class="label">البريد الإلكتروني</label><input id="stEmail" class="input" dir="ltr" value="${esc(settings.email || '')}"></div></div>
@@ -1544,15 +1520,14 @@ views.settings = {
   },
   update(){}
 };
-actions.heroFile = (d, t) => { const f = t.files[0]; if (!f) return; heroFile = f; $('#heroUrl').value = ''; $('#heroPrev').src = URL.createObjectURL(f); };
-actions.heroUrl = (d, t) => { const u = t.value.trim(); if (u) { heroFile = null; $('#heroFileIn').value = ''; $('#heroPrev').src = normalizeImageUrl(u); } };
+actions.heroUrl = (d, t) => { const u = t.value.trim(); if (u) { $('#heroPrev').src = normalizeImageUrl(u); } };
 async function saveSettings(e){
   e.preventDefault(); const btn = $('#stSave'); btn.disabled = true; btn.textContent = 'جارِ الحفظ...';
   try {
     const data = { phone:$('#stPhone').value.trim(), email:$('#stEmail').value.trim(), countryCode:($('#stCC').value.replace(/\D/g, '') || '249'), defaultMinStock:Number($('#stMin').value) || 0, lateHours:Number($('#stLate').value) || 24 };
     const url = $('#heroUrl').value.trim();
-    if (url) data.heroImage = normalizeImageUrl(url); else if (heroFile) data.heroImage = await uploadImage(heroFile, 'settings');
-    await setDoc(doc(db, 'settings', 'store'), data, { merge:true }); toast('تم حفظ الإعدادات'); heroFile = null;
+    if (url) data.heroImage = normalizeImageUrl(url);
+    await setDoc(doc(db, 'settings', 'store'), data, { merge:true }); toast('تم حفظ الإعدادات');
   } catch (err) { toast('تعذر الحفظ — ' + friendlyError(err), 'err'); console.error(err); }
   btn.disabled = false; btn.textContent = 'حفظ الإعدادات';
 }
