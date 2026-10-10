@@ -59,8 +59,8 @@
   .strip{ background:#EBD6D5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90' viewBox='0 0 90 90'%3E%3Cg fill='none' stroke='%23d9b9bb' stroke-width='1' opacity='.7'%3E%3Cpath d='M45 10c8 8 8 18 0 26-8-8-8-18 0-26z'/%3E%3Cpath d='M45 36c10-4 20 0 24 10-10 4-20 0-24-10z'/%3E%3Cpath d='M45 36c-10-4-20 0-24 10 10 4 20 0 24-10z'/%3E%3C/g%3E%3C/svg%3E"); }
   .drawer{ transform:translateX(100%); transition:transform .5s cubic-bezier(.2,.8,.2,1); }
   .drawer.open{ transform:none; }
-  #toast{ transform:translateY(140%); transition:transform .5s cubic-bezier(.2,.8,.2,1); }
-  #toast.show{ transform:none; }
+  #toast{ opacity:0; visibility:hidden; transform:translateY(24px); transition:transform .5s cubic-bezier(.2,.8,.2,1), opacity .35s, visibility 0s .5s; }
+  #toast.show{ opacity:1; visibility:visible; transform:none; transition:transform .5s cubic-bezier(.2,.8,.2,1), opacity .35s, visibility 0s; }
   .acc-body{ max-height:0; overflow:hidden; transition:max-height .5s ease; }
   .skel{ background:linear-gradient(90deg,#f1e2e1 25%,#f8eeed 37%,#f1e2e1 63%); background-size:400% 100%; animation:skel 1.4s ease infinite; }
   @keyframes skel{ 0%{background-position:100% 50%} 100%{background-position:0 50%} }
@@ -96,7 +96,7 @@
     </a>
 
     <!-- nav -->
-    <nav class="hidden lg:flex items-center gap-6 xl:gap-7">
+    <nav class="hidden lg:flex items-center gap-4 xl:gap-7">
       <a href="#home" class="nav-link active">الرئيسية</a>
       <div class="dd"><button class="nav-link">المنتجات <i class="fa-solid fa-chevron-down text-[8px] mr-1"></i></button>
         <div class="dd-menu"><button onclick="goCollection('all')">كل المنتجات</button><button onclick="goCollection('bestseller')">الأكثر مبيعاً</button><button onclick="goCollection('new')">وصل حديثاً</button><button onclick="goCollection('sale')">عروض</button></div></div>
@@ -117,8 +117,8 @@
         <button onclick="openSearch()" title="بحث"><i class="fa-solid fa-magnifying-glass"></i></button>
         <button class="lg:hidden" onclick="document.getElementById('mobileNav').classList.toggle('hidden')"><i class="fa-solid fa-bars"></i></button>
       </div>
-      <form onsubmit="event.preventDefault(); openSearch(this.q.value)" class="hidden md:flex items-center bg-white border border-[#DDBFC1] rounded-full pl-1 pr-4 h-9 w-[250px]">
-        <input name="q" placeholder="ابحث عن منتجك المفضل..." class="flex-1 bg-transparent text-[11px] focus:outline-none">
+      <form onsubmit="event.preventDefault(); openSearch(this.q.value)" class="hidden md:flex items-center bg-white border border-[#DDBFC1] rounded-full pl-1 pr-4 h-9 w-[250px] lg:w-[190px] xl:w-[250px]">
+        <input name="q" placeholder="ابحث عن منتجك المفضل..." class="flex-1 min-w-0 bg-transparent text-[11px] focus:outline-none">
         <button class="w-7 h-7 rounded-full bg-mauve text-white text-[11px] flex items-center justify-center"><i class="fa-solid fa-magnifying-glass"></i></button>
       </form>
     </div>
@@ -133,9 +133,9 @@
   <img id="heroImg" src="https://images.unsplash.com/photo-1607344645866-009c320b63e0?w=1800&q=80&auto=format" class="absolute inset-y-0 right-0 w-full md:w-[68%] h-full object-cover" alt="Wishly gifts">
   <div class="absolute inset-0 hero-fade"></div>
   <div class="relative max-w-[1180px] mx-auto px-6 md:px-10 h-full flex items-end md:items-center pb-6 md:pb-0">
-    <div class="md:w-[46%] md:mr-auto text-center md:text-right relative">
+    <div class="md:w-[50%] lg:w-[46%] md:mr-auto text-center md:text-right relative">
       <svg class="hidden md:block absolute -top-12 right-[-20px]" width="110" height="46" viewBox="0 0 110 46" fill="none" stroke="#9A5C6D" stroke-width="1.2" opacity=".75"><path d="M2 40c18-6 40-2 52-14 8-9-2-22-12-16-9 6 2 18 14 14 22-8 32-22 52-14" stroke-linecap="round"/></svg>
-      <h1 class="text-[1.65rem] md:text-[1.75rem] lg:text-[2rem] font-semibold text-mauve leading-snug">كل مناسبة .. لها لمستها الخاصة</h1>
+      <h1 class="text-[1.65rem] md:text-[1.4rem] lg:text-[1.75rem] xl:text-[2rem] font-semibold text-mauve leading-snug">كل مناسبة .. لها لمستها الخاصة</h1>
       <p class="text-[13px] md:text-sm mt-2 text-ink/80">نوفر لك أجمل التوزيعات والباقات المميزة</p>
       <p class="text-[13px] md:text-sm mt-1 text-ink/80">بجودة عالية وتفاصيل تحكي قصة فرحتك <i class="fa-solid fa-heart text-mauve text-[10px]"></i></p>
       <a href="#collection" class="btn mt-4 !py-2 !px-7 text-[13px]">تسوقي الآن</a>
@@ -291,7 +291,7 @@
   <div class="max-w-2xl mx-auto text-center">
     <h3 class="text-xl font-bold text-mauveD mb-2">كوني أول من يعرف بجديدنا</h3>
     <p class="text-ink/60 text-sm mb-5">اشتركي في نشرتنا لتصلك أحدث التصاميم والعروض الحصرية.</p>
-    <form onsubmit="event.preventDefault(); showToast('تم الاشتراك في النشرة البريدية 🤍')" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+    <form onsubmit="event.preventDefault(); showToast('تم الاشتراك في النشرة البريدية')" class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
       <input type="email" required placeholder="بريدك الإلكتروني" class="field !rounded-full flex-1">
       <button class="btn">اشتراك</button>
     </form>
@@ -310,7 +310,7 @@
   <div class="max-w-[1180px] mx-auto border-t border-white/10 pt-5 flex flex-col md:flex-row justify-between items-center gap-2 text-xs text-white/45"><p>© 2026 وشلي — جميع الحقوق محفوظة</p><p>صُنع بحب في السودان 🤍</p></div>
 </footer>
 
-<a href="https://wa.me/249904298584?text=السلام%20عليكم،عايز/ة%20أستفسر%20عن%20الهدايا%20المتوفرة." target="_blank" rel="noopener noreferrer" class="fixed bottom-6 left-6 z-[110] w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-2xl"></i></a>
+<a href="https://wa.me/249904298584?text=السلام%20عليكم،أرغب%20في%20الاستفسار%20عن%20الهدايا%20المتوفرة." target="_blank" rel="noopener noreferrer" class="fixed bottom-6 left-6 z-[110] w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-2xl hover:scale-110 transition-transform" title="Chat on WhatsApp"><i class="fa-brands fa-whatsapp text-2xl"></i></a>
 <button onclick="window.scrollTo({top:0,behavior:'smooth'})" id="toTop" class="fixed bottom-6 right-6 z-[110] w-12 h-12 rounded-full bg-white border border-blush shadow flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500"><i class="fa-solid fa-arrow-up text-mauve"></i></button>
 
 <!-- SEARCH -->
@@ -414,7 +414,7 @@ const GENERAL = [
 const REVIEWS = [
   { name:'مريم أحمد', occ:'عروس ٢٠٢٦', text:'التوزيعات كانت أجمل من الخيال، كل ضيوفي سألوني عن المكان! تفاصيل تستحق كل جنيه.' },
   { name:'سارة خالد', occ:'خطوبة', text:'تعامل راقي واهتمام بأدق التفاصيل، فريق وشلي فهم ذوقي من أول مكالمة.' },
-  { name:'نور الهدى', occ:'مناسبة شركة', text:'هدايا الشركة كانت راقية جداً وعملائنا سعدوا بها كثيراً، هنكرر التعامل أكيد.' },
+  { name:'نور الهدى', occ:'مناسبة شركة', text:'هدايا الشركة كانت راقية جداً وعملائنا سعدوا بها كثيراً، سنكرر التعامل بالتأكيد.' },
   { name:'ياسمين محمود', occ:'استقبال مولود', text:'تنظيم ودقة في المواعيد، والتغليف كان أجمل من المنتج نفسه!' },
 ];
 const FAQS = [
@@ -499,7 +499,7 @@ function renderProducts(){
   document.getElementById('activeCatLabel').textContent = window._catFilter ? '— ' + catName(window._catFilter) : '';
   if(!list.length){
     gridEl.innerHTML = products.length===0
-      ? `<div class="col-span-full text-center py-16"><i class="fa-solid fa-gift text-4xl text-mauve/40 mb-4"></i><p class="font-bold mb-1">التشكيلة قيد التجهيز</p><p class="text-ink/50 text-sm">قريباً هتلاقي هنا أحدث تصاميمنا ✨</p></div>`
+      ? `<div class="col-span-full text-center py-16"><i class="fa-solid fa-gift text-4xl text-mauve/40 mb-4"></i><p class="font-bold mb-1">التشكيلة قيد التجهيز</p><p class="text-ink/50 text-sm">قريباً ستجدين هنا أحدث تصاميمنا</p></div>`
       : `<p class="col-span-full text-center text-ink/50 py-10">لا توجد تصاميم مطابقة، جربي فلتر آخر.</p>`;
     return;
   }
@@ -544,7 +544,7 @@ window.addToCart = (id)=>{ const p=products.find(x=>x.id===id); if(!p) return;
   if(avail(p)<=0){ showToast('عذراً، هذا المنتج غير متوفر حالياً'); return; }
   const e=cart.find(x=>x.id===id);
   if(e){ if(e.qty+1>avail(p)){ showToast(`الكمية المتاحة ${p.stock} فقط`); return; } e.qty++; } else cart.push({...p,qty:1});
-  renderCart(); showToast(`تمت إضافة "${p.name}" إلى السلة 🛍️`); };
+  renderCart(); showToast(`تمت إضافة "${p.name}" إلى السلة`); };
 window.changeQty = (id,d)=>{ const it=cart.find(x=>x.id===id); const live=products.find(x=>x.id===id); if(d>0 && live && it.qty+d>avail(live)){ showToast(`الكمية المتاحة ${live.stock} فقط`); return; } it.qty+=d; if(it.qty<=0) cart=cart.filter(x=>x.id!==id); renderCart(); };
 window.removeFromCart = (id)=>{ cart=cart.filter(x=>x.id!==id); renderCart(); };
 function renderCart(){
@@ -558,7 +558,7 @@ function renderCart(){
   const c = cart.reduce((s,i)=>s+i.qty,0), b=document.getElementById('cartCount'); b.textContent=c; b.classList.toggle('hidden',c===0);
 }
 window.toggleWishlist = (id)=>{ const p=products.find(x=>x.id===id); if(!p) return;
-  if(wishlist.find(x=>x.id===id)){ wishlist=wishlist.filter(x=>x.id!==id); showToast('تمت الإزالة من المفضلة'); } else { wishlist.push(p); showToast(`أضيفت "${p.name}" إلى المفضلة 🤍`); }
+  if(wishlist.find(x=>x.id===id)){ wishlist=wishlist.filter(x=>x.id!==id); showToast('تمت الإزالة من المفضلة'); } else { wishlist.push(p); showToast(`أضيفت "${p.name}" إلى المفضلة`); }
   renderWishlist(); };
 function renderWishlist(){
   document.getElementById('wishlistItems').innerHTML = wishlist.length ? wishlist.map(p=>`
@@ -603,7 +603,7 @@ window.checkout = async ()=>{
   const btn=document.getElementById('checkoutBtn'), original=btn.textContent; btn.disabled=true; btn.textContent='جارِ الإرسال...';
   try{
     await addDoc(collection(db,'orders'), { customer:name, phone, address, items:cart.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty,cat:i.cat,img:(i.img&&i.img.startsWith('http'))?i.img:''})), source:'web', total:cart.reduce((s,i)=>s+i.price*i.qty,0), status:'قيد الانتظار', createdAt:Date.now(), seen:false });
-    showToast('تم إرسال طلبك بنجاح! سيتواصل معك فريقنا قريباً 🤍');
+    showToast('تم إرسال طلبك بنجاح! سيتواصل معك فريقنا قريباً');
     cart=[]; renderCart(); closeDrawer('cart'); document.getElementById('checkoutName').value=''; document.getElementById('checkoutPhone').value=''; document.getElementById('checkoutAddress').value='';
   }catch(err){ showToast('تعذر إرسال الطلب، تحققي من اتصالك بالإنترنت وحاولي مرة أخرى'); console.error(err); }
   btn.disabled=false; btn.textContent=original;
@@ -656,11 +656,11 @@ window.submitCustom = async (e)=>{
   const btn=document.getElementById('cfSubmitBtn'), original=btn.innerHTML; btn.disabled=true; btn.innerHTML='جارِ الإرسال...';
   try{
     await addDoc(collection(db,'customOrders'), { name:g('cfName').trim(), phone:g('cfPhone').trim(), occasion:g('cfOccasion'), eventDate:g('cfDate'), pieces:g('cfPieces'), budget:g('cfBudget').trim(), description:g('cfDesc').trim(), status:'جديد', createdAt:Date.now(), seen:false });
-    showToast('استلمنا طلبك الخاص، سيتواصل معك فريق التصميم قريباً 🎨'); e.target.reset();
+    showToast('استلمنا طلبك الخاص، سيتواصل معك فريق التصميم قريباً'); e.target.reset();
   }catch(err){ showToast('تعذر إرسال الطلب، تحققي من اتصالك بالإنترنت وحاولي مرة أخرى'); console.error(err); }
   btn.disabled=false; btn.innerHTML=original;
 };
-window.submitContact=(e)=>{ e.preventDefault(); showToast('تم إرسال رسالتك بنجاح، شكراً لتواصلك معنا 🤍'); e.target.reset(); };
+window.submitContact=(e)=>{ e.preventDefault(); showToast('تم إرسال رسالتك بنجاح، شكراً لتواصلك معنا'); e.target.reset(); };
 let toastTimer;
 function showToast(msg){ document.getElementById('toastMsg').textContent=msg; const t=document.getElementById('toast'); t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),3200); }
 window.showToast=showToast;
